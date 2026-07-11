@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Theo's Speech Adventure v1.0.1 -->
+<!-- Theo's Speech Adventure v1.1 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -48,6 +48,21 @@
   .hero-btn.selected { border-color:#FFD700; background:rgba(255,255,255,0.35); transform:scale(1.1); }
   .hero-btn:active { transform:scale(0.95); }
   .star-bank { color:#FFD700; font-size:1.1em; font-weight:bold; margin-bottom:8px; text-shadow:1px 1px 0 rgba(0,0,0,0.2); }
+  .level-badge { display:flex; align-items:center; gap:10px; justify-content:center; margin-bottom:6px; }
+  .level-num { background:linear-gradient(135deg,#FFD700,#FFA726); color:#5C3317; font-weight:bold; padding:5px 16px; border-radius:20px; font-size:1.05em; box-shadow:0 4px 12px rgba(255,183,71,0.4); }
+  .level-name { color:white; font-size:1em; text-shadow:1px 1px 0 rgba(0,0,0,0.15); }
+  .level-bar-wrap { width:220px; max-width:70%; height:12px; background:rgba(255,255,255,0.2); border-radius:8px; margin:0 auto 12px; overflow:hidden; }
+  .level-bar { height:100%; background:linear-gradient(90deg,#FFD700,#FF8E53); border-radius:8px; transition:width 0.5s; }
+  .inv-btn { background:rgba(255,255,255,0.2); border:2px solid rgba(255,255,255,0.4); color:white; font-size:1em; font-weight:bold; padding:9px 22px; border-radius:25px; cursor:pointer; margin-top:14px; }
+  .inv-btn:active { transform:scale(0.95); }
+  .inv-panel { background:rgba(0,0,0,0.25); border-radius:16px; padding:14px; margin:10px auto 0; display:flex; flex-wrap:wrap; gap:10px; justify-content:center; max-width:320px; }
+  .inv-item { background:rgba(255,255,255,0.15); border-radius:12px; padding:6px 12px; font-size:1.3em; color:white; animation:pop 0.3s ease-out; }
+  .inv-item small { font-size:0.65em; color:#FFD700; font-weight:bold; }
+  .home-btn { background:rgba(255,255,255,0.25); border:none; border-radius:50%; width:34px; height:34px; font-size:1.05em; cursor:pointer; margin-right:6px; line-height:1; }
+  .home-btn:active { transform:scale(0.9); }
+  .home-btn2 { background:rgba(255,255,255,0.2); border:2px solid rgba(255,255,255,0.4); color:white; font-size:1.1em; font-weight:bold; padding:13px 30px; border-radius:50px; cursor:pointer; margin-top:10px; margin-left:8px; }
+  .home-btn2:active { transform:scale(0.95); }
+  .bonus-line { color:#FFD700; font-size:1.2em; font-weight:bold; margin:6px 0; animation:bounce-in 0.5s ease-out; text-shadow:2px 2px 0 rgba(0,0,0,0.25); }
   .trophy-row { display:flex; gap:12px; justify-content:center; margin-bottom:14px; font-size:1.6em; }
   .trophy { opacity:0.22; filter:grayscale(1); transition:all 0.3s; }
   .trophy.earned { opacity:1; filter:none; transform:scale(1.15); }
@@ -138,10 +153,14 @@
     <h1>Theo's Speech Adventure!</h1>
     <p class="subtitle">Say the words &amp; outrun the T-Rex! 🦖</p>
     <div class="star-bank hidden" id="starBank"></div>
+    <div class="level-badge"><span class="level-num" id="levelNum">LEVEL 1</span><span class="level-name" id="levelName">🥾 Explorer</span></div>
+    <div class="level-bar-wrap"><div class="level-bar" id="levelBar" style="width:0%"></div></div>
     <div class="trophy-row" id="trophyRow"></div>
     <div class="hero-label">Pick your hero!</div>
     <div class="hero-row" id="heroRow"></div>
     <button class="start-btn" onclick="startGameWithMic()">🎤 Let's Go!</button>
+    <div><button class="inv-btn" onclick="toggleInv()">🎒 My Treasures</button></div>
+    <div class="inv-panel hidden" id="invPanel"></div>
     <button class="stats-toggle" onclick="toggleStats()">📊 For grown-ups</button>
     <div class="stats-panel hidden" id="statsPanel"></div>
   </div>
@@ -149,6 +168,7 @@
   <div class="game-screen hidden" id="gameScreen">
     <div class="hud-row">
       <div class="hud-collect">
+        <button class="home-btn" onclick="goHome()" aria-label="Home">🏠</button>
         <span class="hud-label">Loot:</span>
         <span id="collectiblesRow"></span>
       </div>
@@ -186,12 +206,14 @@
     <div class="new-trophy hidden" id="newTrophyGo"></div>
     <div class="end-loot" id="goLoot"></div>
     <button class="tryagain-btn" onclick="startGameWithMic()">🔄 Try Again!</button>
+    <button class="home-btn2" onclick="goHome()">🏠 Home</button>
   </div>
 
   <!-- WIN SCREEN -->
   <div class="end-screen hidden" id="endScreen">
     <div class="end-trophy">🏆</div>
     <h1 id="endTitle">Amazing Job!</h1>
+    <div class="bonus-line hidden" id="bonusLine"></div>
     <div class="new-trophy hidden" id="newTrophyWin"></div>
     <div class="end-loot" id="endLoot"></div>
     <div class="end-stats">
@@ -199,6 +221,7 @@
       <div class="end-stat" id="streakDisplay"></div>
     </div>
     <button class="play-again-btn" onclick="startGameWithMic()">🔄 Play Again!</button>
+    <button class="home-btn2" onclick="goHome()">🏠 Home</button>
   </div>
 
   <div class="no-support hidden" id="noSupport">
@@ -954,9 +977,9 @@ let gameActive=false, collectedItems=[];
 // ============================================================
 //  PROGRESS TRACKING — saved across sessions
 // ============================================================
-function freshStats(){return {games:0,best:0,stars:0,sounds:{K:{ok:0,tries:0},G:{ok:0,tries:0},CH:{ok:0,tries:0},J:{ok:0,tries:0},R:{ok:0,tries:0}}};}
+function freshStats(){return {games:0,best:0,stars:0,inv:{},sounds:{K:{ok:0,tries:0},G:{ok:0,tries:0},CH:{ok:0,tries:0},J:{ok:0,tries:0},R:{ok:0,tries:0}}};}
 function loadStats(){
-  try{const s=JSON.parse(lsGet('theoStats','null'));if(s&&s.sounds)return s;}catch(e){}
+  try{const s=JSON.parse(lsGet('theoStats','null'));if(s&&s.sounds){if(!s.inv)s.inv={};return s;}}catch(e){}
   return freshStats();
 }
 let stats=loadStats();
@@ -987,18 +1010,101 @@ function sayTrophy(){
   u.lang='en-US';u.rate=0.9;u.pitch=1.2;
   window.speechSynthesis.speak(u);
 }
+function sayLevelUp(){
+  const u=new SpeechSynthesisUtterance("LEVEL UP! You are now level "+newLevel.n+", the "+newLevel.name+"!");
+  u.lang='en-US';u.rate=0.9;u.pitch=1.2;
+  window.speechSynthesis.speak(u);
+}
+function sayEnd(){
+  let msg=score===10?"PERFECT SCORE! Ten out of ten! You win five bonus stars!":"You got "+score+" out of ten!";
+  if(newLevel)msg+=" LEVEL UP! You are now level "+newLevel.n+", the "+newLevel.name+"!";
+  else if(newTrophy)msg+=" Wow! You earned a new trophy!";
+  else if(score>=6&&Math.random()<0.3)msg+=" "+JOKES[Math.floor(Math.random()*JOKES.length)];
+  const u=new SpeechSynthesisUtterance(msg);
+  u.lang='en-US';u.rate=0.9;u.pitch=1.15;
+  window.speechSynthesis.cancel();window.speechSynthesis.speak(u);
+}
 
+let newLevel=null;
 function recordGameEnd(){
   stats.games++;if(score>stats.best)stats.best=score;
   saveStats();
   const crossed=TROPHIES.filter(t=>gameStartStars<t.stars&&stats.stars>=t.stars);
   newTrophy=crossed.length?crossed[crossed.length-1]:null;
+  const before=levelInfo(gameStartStars).lvl.n, after=levelInfo(stats.stars).lvl;
+  newLevel=after.n>before?after:null;
   updateTrophyRow();
 }
 function updateStarBank(){
   const el=document.getElementById('starBank');if(!el)return;
   if(stats.stars>0){el.textContent='⭐ '+stats.stars+' stars collected!';el.classList.remove('hidden');}
   else el.classList.add('hidden');
+  updateLevelBadge();
+}
+
+// ============================================================
+//  LEVELS — total stars drive progression
+// ============================================================
+const LEVELS=[
+  {n:1,need:0,emoji:'🥾',name:'Explorer'},
+  {n:2,need:15,emoji:'🏃',name:'Runner'},
+  {n:3,need:35,emoji:'🦘',name:'Jumper'},
+  {n:4,need:60,emoji:'🧗',name:'Climber'},
+  {n:5,need:90,emoji:'🪁',name:'Flyer'},
+  {n:6,need:125,emoji:'🚀',name:'Rocketeer'},
+  {n:7,need:165,emoji:'⭐',name:'Star Catcher'},
+  {n:8,need:210,emoji:'🦖',name:'Dino Tamer'},
+  {n:9,need:260,emoji:'🦸',name:'Super Hero'},
+  {n:10,need:320,emoji:'👑',name:'Legend'},
+];
+function levelInfo(stars){
+  let cur=LEVELS[0],next=null;
+  for(const L of LEVELS){ if(stars>=L.need)cur=L; else {next=L;break;} }
+  const pct=next?Math.min(100,Math.round((stars-cur.need)/(next.need-cur.need)*100)):100;
+  return {lvl:cur,next,pct};
+}
+function updateLevelBadge(){
+  const n=document.getElementById('levelNum');if(!n)return;
+  const li=levelInfo(stats.stars);
+  n.textContent='LEVEL '+li.lvl.n;
+  document.getElementById('levelName').textContent=li.lvl.emoji+' '+li.lvl.name;
+  document.getElementById('levelBar').style.width=li.pct+'%';
+}
+
+// ============================================================
+//  INVENTORY — treasures saved forever
+// ============================================================
+function addToInv(emoji){ stats.inv[emoji]=(stats.inv[emoji]||0)+1; }
+function toggleInv(){
+  const p=document.getElementById('invPanel');
+  if(!p.classList.contains('hidden')){p.classList.add('hidden');return;}
+  p.innerHTML='';
+  const keys=Object.keys(stats.inv||{});
+  if(keys.length===0){
+    const d=document.createElement('div');d.className='inv-item';d.textContent='🕸️ Empty — go collect some loot!';p.appendChild(d);
+  } else {
+    keys.forEach(k=>{
+      const d=document.createElement('div');d.className='inv-item';
+      d.innerHTML=k+' <small>×'+stats.inv[k]+'</small>';
+      p.appendChild(d);
+    });
+  }
+  p.classList.remove('hidden');
+  setTimeout(()=>{p.scrollIntoView({behavior:'smooth',block:'nearest'});},60);
+}
+
+// ============================================================
+//  HOME NAVIGATION
+// ============================================================
+function goHome(){
+  gameActive=false;
+  stopListeningNow();stopFootsteps();
+  try{window.speechSynthesis.cancel();}catch(e){}
+  if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;}
+  ['gameScreen','endScreen','gameoverScreen','statsPanel','invPanel'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+  document.getElementById('startScreen').classList.remove('hidden');
+  updateStarBank();updateTrophyRow();buildHeroPicker();
+  drawStartCharacter();
 }
 
 const SOUND_NAMES={K:'K — cake, duck',G:'G — dog, goat',CH:'CH — cheese, chair',J:'J — juice, jump',R:'R — rocket, star'};
@@ -1024,7 +1130,8 @@ function renderStats(){
 }
 function resetStats(){
   if(!confirm("Reset all of Theo's progress? This can't be undone."))return;
-  stats=freshStats();saveStats();renderStats();updateStarBank();
+  stats=freshStats();saveStats();renderStats();updateStarBank();updateTrophyRow();
+  document.getElementById('invPanel').classList.add('hidden');
 }
 
 // ============================================================
@@ -1056,11 +1163,38 @@ function createRecognition(){
   recognition.onend=()=>{stopListening();};
 }
 
+// ============================================================
+//  VOICE PERSONALITY — snark aimed at the T-Rex, never at Theo.
+//  Wrong answers stay 100% encouraging.
+// ============================================================
+const FUN_LINES=[
+  "The T-Rex looks SO grumpy right now!",
+  "You're way too fast for that silly T-Rex!",
+  "That T-Rex couldn't even catch a snail!",
+  "Easy peasy, lemon squeezy!",
+  "I think the T-Rex just cried a little.",
+  "Zoom zoom! Nobody can catch you!",
+  "The T-Rex wanted a snack, but all he got was dust!",
+];
+const JOKES=[
+  "What do you call a sleeping dinosaur? A dino-snore!",
+  "What do you call a dinosaur that talks and talks and talks? A dino-bore!",
+  "Why did the dinosaur cross the road? Because the chicken was not born yet!",
+  "What does a T-Rex eat for breakfast? Dino-mite!",
+  "What do you call a dinosaur with no eyes? Do-you-think-he-saw-us!",
+  "How do you invite a dinosaur to lunch? Tea, Rex?",
+];
+
 // Speak what was heard out loud
 function sayHeard(word, isCorrect){
-  const msg = isCorrect
+  let msg = isCorrect
     ? "I heard you say " + word + "! Great job!"
     : "I heard you say " + word + ". Try again!";
+  if(isCorrect){
+    const r=Math.random();
+    if(r<0.12) msg+=" "+JOKES[Math.floor(Math.random()*JOKES.length)];
+    else if(r<0.40) msg+=" "+FUN_LINES[Math.floor(Math.random()*FUN_LINES.length)];
+  }
   const u=new SpeechSynthesisUtterance(msg);
   u.lang='en-US'; u.rate=0.85; u.pitch=1.1;
   window.speechSynthesis.cancel();
@@ -1247,7 +1381,8 @@ function triggerGameOver(){
     document.getElementById('goScore').textContent=score;
     document.getElementById('goLoot').textContent=collectedItems.length>0?collectedItems.join(' '):'';
     const nt=document.getElementById('newTrophyGo');
-    if(newTrophy){nt.textContent=newTrophy.emoji+' NEW TROPHY! '+newTrophy.emoji;nt.classList.remove('hidden');launchConfetti();sayTrophy();}
+    if(newLevel){nt.textContent=newLevel.emoji+' LEVEL UP! '+newLevel.emoji;nt.classList.remove('hidden');launchConfetti();sayLevelUp();}
+    else if(newTrophy){nt.textContent=newTrophy.emoji+' NEW TROPHY! '+newTrophy.emoji;nt.classList.remove('hidden');launchConfetti();sayTrophy();}
     else nt.classList.add('hidden');
   },2800);
 }
@@ -1257,7 +1392,7 @@ function showFeedback(text,type){
   el.className='feedback-msg '+type;el.classList.remove('hidden');
   el.style.animation='none';el.offsetHeight;el.style.animation='bounce-in 0.4s ease-out';
 }
-function addCollectible(emoji){collectedItems.push(emoji);const r=document.getElementById('collectiblesRow');const i=document.createElement('span');i.className='collected-item';i.textContent=emoji;r.appendChild(i);}
+function addCollectible(emoji){collectedItems.push(emoji);addToInv(emoji);saveStats();const r=document.getElementById('collectiblesRow');const i=document.createElement('span');i.className='collected-item';i.textContent=emoji;r.appendChild(i);}
 
 function skipWord(){
   // Skipping is FREE — no strike. Practice should never punish moving on.
@@ -1266,7 +1401,9 @@ function skipWord(){
 }
 
 function endGame(){
-  gameActive=false;recordGameEnd();stopListeningNow();stopFootsteps();
+  gameActive=false;
+  if(score===10){stats.stars+=5;addToInv('🌈');} // PERFECT ROUND BONUS
+  recordGameEnd();stopListeningNow();stopFootsteps();
   char.targetX=CANVAS_W-70;char.state=STATES.CELEBRATING;char.stateTimer=0;
   setTimeout(()=>{
     if(animFrame)cancelAnimationFrame(animFrame);
@@ -1280,9 +1417,14 @@ function endGame(){
     else if(score>=7){t.textContent="🎉 Amazing Job!";launchConfetti();}
     else if(score>=4){t.textContent="⭐ Great Work!";}
     else{t.textContent="💪 Keep Practicing!";}
+    const bl=document.getElementById('bonusLine');
+    if(score===10){bl.textContent='🌈 +5 BONUS STARS! 🌈';bl.classList.remove('hidden');}
+    else bl.classList.add('hidden');
     const nt=document.getElementById('newTrophyWin');
-    if(newTrophy){nt.textContent=newTrophy.emoji+' NEW TROPHY! '+newTrophy.emoji;nt.classList.remove('hidden');launchConfetti();sayTrophy();}
+    if(newLevel){nt.textContent=newLevel.emoji+' LEVEL UP! '+newLevel.emoji;nt.classList.remove('hidden');launchConfetti();}
+    else if(newTrophy){nt.textContent=newTrophy.emoji+' NEW TROPHY! '+newTrophy.emoji;nt.classList.remove('hidden');launchConfetti();}
     else nt.classList.add('hidden');
+    sayEnd();
     playJumpCollect();
   },1500);
 }
