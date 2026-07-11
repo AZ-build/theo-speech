@@ -1,9 +1,19 @@
 <!DOCTYPE html>
+<!-- Theo's Speech Adventure v1.0 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#667eea">
+<meta name="description" content="A speech adventure game — say the words and outrun the T-Rex!">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Theo's Adventure">
 <title>Theo's Speech Adventure!</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
@@ -16,16 +26,37 @@
   @keyframes pulse-ring { 0%{transform:scale(1);opacity:0.8} 100%{transform:scale(1.8);opacity:0} }
   @keyframes pulse-danger { 0%,100%{opacity:1} 50%{opacity:0.5} }
 
+  @keyframes bgshift { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+
   body {
-    font-family: -apple-system,'Segoe UI',Roboto,sans-serif;
-    background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+    font-family:'Fredoka','Comic Sans MS','Chalkboard SE',-apple-system,'Segoe UI',Roboto,sans-serif;
+    background: linear-gradient(135deg,#667eea 0%,#764ba2 45%,#5f72bd 100%);
+    background-size:200% 200%; animation:bgshift 18s ease infinite;
     min-height:100vh; overflow:hidden; touch-action:manipulation;
     -webkit-tap-highlight-color:transparent; user-select:none;
   }
+  button { font-family:inherit; transition:transform 0.15s ease, box-shadow 0.15s ease; }
   .app { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; padding:10px; position:relative; }
 
   /* START */
   .start-screen { text-align:center; animation:pop 0.6s ease-out; }
+  .hero-label { color:rgba(255,255,255,0.85); font-size:0.95em; margin-bottom:6px; }
+  .hero-row { display:flex; gap:10px; justify-content:center; margin-bottom:18px; }
+  .hero-btn { width:64px; height:64px; border-radius:16px; border:3px solid transparent; background:rgba(255,255,255,0.15); cursor:pointer; padding:0; }
+  .hero-btn.selected { border-color:#FFD700; background:rgba(255,255,255,0.35); transform:scale(1.1); }
+  .hero-btn:active { transform:scale(0.95); }
+  .star-bank { color:#FFD700; font-size:1.1em; font-weight:bold; margin-bottom:8px; text-shadow:1px 1px 0 rgba(0,0,0,0.2); }
+  .trophy-row { display:flex; gap:12px; justify-content:center; margin-bottom:14px; font-size:1.6em; }
+  .trophy { opacity:0.22; filter:grayscale(1); transition:all 0.3s; }
+  .trophy.earned { opacity:1; filter:none; transform:scale(1.15); }
+  .new-trophy { font-size:1.3em; color:#FFD700; font-weight:bold; margin:8px 0; animation:bounce-in 0.6s ease-out; text-shadow:2px 2px 0 rgba(0,0,0,0.25); }
+  .stats-toggle { background:none; border:none; color:rgba(255,255,255,0.55); font-size:0.8em; cursor:pointer; margin-top:18px; text-decoration:underline; }
+  .stats-panel { background:rgba(0,0,0,0.25); border-radius:16px; padding:14px 18px; margin-top:10px; text-align:left; max-width:300px; margin-left:auto; margin-right:auto; }
+  .stats-panel h3 { color:white; font-size:0.95em; margin-bottom:8px; text-align:center; }
+  .stat-line { color:rgba(255,255,255,0.9); font-size:0.85em; margin:4px 0; }
+  .stat-bar-wrap { background:rgba(255,255,255,0.15); border-radius:8px; height:10px; overflow:hidden; margin:2px 0 8px; }
+  .stat-bar { height:100%; border-radius:8px; background:linear-gradient(90deg,#77DD77,#4CAF50); }
+  .stats-reset { background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); color:white; font-size:0.75em; padding:5px 14px; border-radius:15px; cursor:pointer; margin-top:6px; display:block; margin-left:auto; margin-right:auto; }
   .start-screen h1 { font-size:2.2em; color:white; text-shadow:3px 3px 0 rgba(0,0,0,0.2); margin-bottom:10px; animation:rainbow 3s linear infinite; }
   .start-screen .subtitle { font-size:1.1em; color:rgba(255,255,255,0.9); margin-bottom:25px; }
   .start-btn { background:linear-gradient(135deg,#FF6B6B,#FF8E53); border:none; color:white; font-size:1.6em; font-weight:bold; padding:18px 50px; border-radius:50px; cursor:pointer; box-shadow:0 8px 25px rgba(255,107,107,0.4); animation:bounce-in 0.8s ease-out; }
@@ -47,7 +78,11 @@
 
   /* GAME */
   .game-screen { text-align:center; width:100%; max-width:420px; }
-  .word-card { background:white; border-radius:30px; padding:20px 15px; margin:6px 0 10px; box-shadow:0 12px 35px rgba(0,0,0,0.15); animation:pop 0.5s ease-out; }
+  .progress-dots { display:flex; gap:6px; justify-content:center; margin:2px 0 4px; }
+  .p-dot { width:10px; height:10px; border-radius:50%; background:rgba(255,255,255,0.3); transition:all 0.3s; }
+  .p-dot.done { background:#FFD700; }
+  .p-dot.now { background:white; transform:scale(1.4); box-shadow:0 0 8px rgba(255,255,255,0.8); }
+  .word-card { background:white; border:4px solid rgba(255,255,255,0.55); border-radius:30px; padding:20px 15px; margin:4px 0 10px; box-shadow:0 12px 35px rgba(0,0,0,0.2); animation:pop 0.5s ease-out; }
   .word-emoji { font-size:5em; animation:float 3s ease-in-out infinite; line-height:1.2; }
   .hear-btn { display:inline-block; background:linear-gradient(135deg,#FFB347,#FF8E53); border:none; color:white; font-size:1em; font-weight:bold; padding:8px 20px; border-radius:25px; cursor:pointer; box-shadow:0 4px 12px rgba(255,142,83,0.3); margin:8px 0 4px; transition:transform 0.15s; }
   .hear-btn:active { transform:scale(0.92); }
@@ -97,10 +132,16 @@
 <body>
 <div class="app" id="app">
   <div class="start-screen" id="startScreen">
-    <canvas id="startCanvas" width="200" height="200" style="margin:0 auto 15px;display:block;"></canvas>
+    <canvas id="startCanvas" width="200" height="200" style="margin:0 auto 10px;display:block;"></canvas>
     <h1>Theo's Speech Adventure!</h1>
     <p class="subtitle">Say the words &amp; outrun the T-Rex! 🦖</p>
+    <div class="star-bank hidden" id="starBank"></div>
+    <div class="trophy-row" id="trophyRow"></div>
+    <div class="hero-label">Pick your hero!</div>
+    <div class="hero-row" id="heroRow"></div>
     <button class="start-btn" onclick="startGameWithMic()">🎤 Let's Go!</button>
+    <button class="stats-toggle" onclick="toggleStats()">📊 For grown-ups</button>
+    <div class="stats-panel hidden" id="statsPanel"></div>
   </div>
 
   <div class="game-screen hidden" id="gameScreen">
@@ -120,6 +161,7 @@
     <div class="runner-canvas-wrap">
       <canvas id="runnerCanvas" width="840" height="220"></canvas>
     </div>
+    <div class="progress-dots" id="progressDots"></div>
     <div class="word-card" id="wordCard">
       <div class="word-emoji" id="wordEmoji">🐸</div>
       <button class="hear-btn" id="hearBtn" onclick="hearWord()">🔊 Hear it</button>
@@ -139,6 +181,7 @@
     <div class="gameover-dino">🦖</div>
     <h1>OH NO! The T-Rex got you!</h1>
     <div class="gameover-msg" id="gameoverMsg">You got <strong id="goScore">0</strong> words before being chomped!</div>
+    <div class="new-trophy hidden" id="newTrophyGo"></div>
     <div class="end-loot" id="goLoot"></div>
     <button class="tryagain-btn" onclick="startGameWithMic()">🔄 Try Again!</button>
   </div>
@@ -147,6 +190,7 @@
   <div class="end-screen hidden" id="endScreen">
     <div class="end-trophy">🏆</div>
     <h1 id="endTitle">Amazing Job!</h1>
+    <div class="new-trophy hidden" id="newTrophyWin"></div>
     <div class="end-loot" id="endLoot"></div>
     <div class="end-stats">
       <div class="end-stat">⭐ You got <strong id="scoreDisplay">0</strong> out of <strong>10</strong>!</div>
@@ -171,6 +215,58 @@ const CH = {
   pantsColor:'#5C6BC0', shoeColor:'#E53935', eyeColor:'#333',
   mouthColor:'#E53935', capeColor:'#FF7043',
 };
+
+// ============================================================
+//  HERO PICKER — 4 styles Theo can choose from
+// ============================================================
+const HEROES=[
+  {skinColor:'#FFD4A3',hairColor:'#5C3317',shirtColor:'#4FC3F7',pantsColor:'#5C6BC0',shoeColor:'#E53935',capeColor:'#FF7043'},
+  {skinColor:'#FFDBB5',hairColor:'#FFB300',shirtColor:'#F06292',pantsColor:'#7E57C2',shoeColor:'#FFD54F',capeColor:'#AB47BC'},
+  {skinColor:'#C68642',hairColor:'#212121',shirtColor:'#66BB6A',pantsColor:'#37474F',shoeColor:'#FF7043',capeColor:'#FFD700'},
+  {skinColor:'#B0BEC5',hairColor:'#607D8B',shirtColor:'#FFCA28',pantsColor:'#455A64',shoeColor:'#26C6DA',capeColor:'#EF5350'},
+];
+
+// Safe localStorage helpers (never crash if storage is blocked)
+function lsGet(k,d){try{const v=localStorage.getItem(k);return v===null?d:v;}catch(e){return d;}}
+function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+
+let selectedHero=Math.min(parseInt(lsGet('theoHero','0'))||0,HEROES.length-1);
+function applyHero(i){Object.assign(CH,HEROES[i]);}
+
+// Gentle mode — parent setting: T-Rex creeps closer but never catches him
+let gentleMode=lsGet('theoGentle','0')==='1';
+function toggleGentle(v){gentleMode=!!v;lsSet('theoGentle',gentleMode?'1':'0');}
+
+function drawHeroPreview(canvas,hero){
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const saved={skinColor:CH.skinColor,hairColor:CH.hairColor,shirtColor:CH.shirtColor,pantsColor:CH.pantsColor,shoeColor:CH.shoeColor,capeColor:CH.capeColor};
+  Object.assign(CH,hero);
+  const s={state:char.state,eyes:char.eyes,visible:char.visible,mouthOpen:char.mouthOpen,rotation:char.rotation,squash:char.squash,stretch:char.stretch,runCycle:char.runCycle};
+  char.state=STATES.IDLE;char.eyes='happy';char.mouthOpen=false;char.rotation=0;char.squash=1;char.stretch=1;char.visible=true;
+  drawChar(ctx,30,36,0.75,0);
+  Object.assign(char,s);
+  Object.assign(CH,saved);
+}
+
+function buildHeroPicker(){
+  const row=document.getElementById('heroRow');
+  if(!row)return;
+  row.innerHTML='';
+  HEROES.forEach((h,i)=>{
+    const b=document.createElement('button');
+    b.className='hero-btn'+(i===selectedHero?' selected':'');
+    const c=document.createElement('canvas');c.width=60;c.height=60;
+    b.appendChild(c);
+    b.onclick=()=>{
+      selectedHero=i;lsSet('theoHero',String(i));applyHero(i);
+      document.querySelectorAll('.hero-btn').forEach((el,j)=>el.classList.toggle('selected',j===i));
+      playStartSound();
+    };
+    row.appendChild(b);
+    drawHeroPreview(c,h);
+  });
+}
 const STATES = {
   IDLE:'idle', RUNNING:'running', JUMPING:'jumping',
   TRIPPING:'tripping', DIZZY:'dizzy', GETTINGUP:'gettingup',
@@ -733,6 +829,7 @@ function launchConfetti(){
 //  WORDS
 // ============================================================
 const ALL_WORDS=[
+  // ===== K SOUNDS (30 words) =====
   {word:"cake",emoji:"🎂",sound:"K",accept:["cake","cakes","kate"]},
   {word:"cat",emoji:"🐱",sound:"K",accept:["cat","cats","cap","kat"]},
   {word:"cookie",emoji:"🍪",sound:"K",accept:["cookie","cookies","cooky"]},
@@ -743,6 +840,24 @@ const ALL_WORDS=[
   {word:"cow",emoji:"🐄",sound:"K",accept:["cow","cows","cal"]},
   {word:"king",emoji:"🤴",sound:"K",accept:["king","kings"]},
   {word:"kite",emoji:"🪁",sound:"K",accept:["kite","kites","kight"]},
+  {word:"corn",emoji:"🌽",sound:"K",accept:["corn","corns","core"]},
+  {word:"kangaroo",emoji:"🦘",sound:"K",accept:["kangaroo","kangaroos"]},
+  {word:"koala",emoji:"🐨",sound:"K",accept:["koala","koalas","cola"]},
+  {word:"clock",emoji:"🕐",sound:"K",accept:["clock","clocks","cluck","block"]},
+  {word:"crown",emoji:"👑",sound:"K",accept:["crown","crowns","clown"]},
+  {word:"candy",emoji:"🍬",sound:"K",accept:["candy","candies","can"]},
+  {word:"castle",emoji:"🏰",sound:"K",accept:["castle","castles"]},
+  {word:"carrot",emoji:"🥕",sound:"K",accept:["carrot","carrots","care"]},
+  {word:"cupcake",emoji:"🧁",sound:"K",accept:["cupcake","cupcakes","cup cake"]},
+  {word:"coconut",emoji:"🥥",sound:"K",accept:["coconut","coconuts","coco"]},
+  {word:"crab",emoji:"🦀",sound:"K",accept:["crab","crabs","grab"]},
+  {word:"camel",emoji:"🐪",sound:"K",accept:["camel","camels"]},
+  {word:"candle",emoji:"🕯️",sound:"K",accept:["candle","candles","can"]},
+  {word:"caterpillar",emoji:"🐛",sound:"K",accept:["caterpillar","caterpillars","cater"]},
+  {word:"cook",emoji:"🧑‍🍳",sound:"K",accept:["cook","cooks","cooked","book","chef"]},
+  {word:"clown",emoji:"🤡",sound:"K",accept:["clown","clowns","crown"]},
+
+  // ===== G SOUNDS (28 words) =====
   {word:"frog",emoji:"🐸",sound:"G",accept:["frog","frogs","frag"]},
   {word:"dog",emoji:"🐶",sound:"G",accept:["dog","dogs","doug","dock"]},
   {word:"goat",emoji:"🐐",sound:"G",accept:["goat","goats","go"]},
@@ -751,6 +866,21 @@ const ALL_WORDS=[
   {word:"guitar",emoji:"🎸",sound:"G",accept:["guitar","guitars"]},
   {word:"ghost",emoji:"👻",sound:"G",accept:["ghost","ghosts","goes"]},
   {word:"pig",emoji:"🐷",sound:"G",accept:["pig","pigs","pick","big"]},
+  {word:"bug",emoji:"🐞",sound:"G",accept:["bug","bugs","bud","but"]},
+  {word:"egg",emoji:"🥚",sound:"G",accept:["egg","eggs","ag"]},
+  {word:"gift",emoji:"🎁",sound:"G",accept:["gift","gifts","give"]},
+  {word:"game",emoji:"🎮",sound:"G",accept:["game","games","gain","came"]},
+  {word:"flag",emoji:"🚩",sound:"G",accept:["flag","flags","flat"]},
+  {word:"log",emoji:"🪵",sound:"G",accept:["log","logs","lock","lot"]},
+  {word:"mug",emoji:"☕",sound:"G",accept:["mug","mugs","mud","much"]},
+  {word:"dragon",emoji:"🐉",sound:"G",accept:["dragon","dragons","drag"]},
+  {word:"goose",emoji:"🪿",sound:"G",accept:["goose","geese","goes"]},
+  {word:"glove",emoji:"🧤",sound:"G",accept:["glove","gloves","love","mitten"]},
+  {word:"penguin",emoji:"🐧",sound:"G",accept:["penguin","penguins"]},
+  {word:"tiger",emoji:"🐯",sound:"G",accept:["tiger","tigers"]},
+  {word:"eagle",emoji:"🦅",sound:"G",accept:["eagle","eagles","ego"]},
+
+  // ===== CH SOUNDS (28 words) =====
   {word:"cheese",emoji:"🧀",sound:"CH",accept:["cheese","cheez","she's","keys","please"]},
   {word:"chicken",emoji:"🐔",sound:"CH",accept:["chicken","chickens","chick"]},
   {word:"cherry",emoji:"🍒",sound:"CH",accept:["cherry","cherries","sherry"]},
@@ -758,12 +888,35 @@ const ALL_WORDS=[
   {word:"chair",emoji:"🪑",sound:"CH",accept:["chair","chairs","share","there"]},
   {word:"church",emoji:"⛪",sound:"CH",accept:["church","churches"]},
   {word:"cheetah",emoji:"🐆",sound:"CH",accept:["cheetah","cheetahs","cheater","chita"]},
+  {word:"chess",emoji:"♟️",sound:"CH",accept:["chess","chest","check"]},
+  {word:"chain",emoji:"⛓️",sound:"CH",accept:["chain","chains","change"]},
+  {word:"peach",emoji:"🍑",sound:"CH",accept:["peach","peaches","beach","each"]},
+  {word:"couch",emoji:"🛋️",sound:"CH",accept:["couch","couches","coach"]},
+  {word:"beach",emoji:"🏖️",sound:"CH",accept:["beach","beaches","each","peach"]},
+  {word:"watch",emoji:"⌚",sound:"CH",accept:["watch","watches","what","wash"]},
+  {word:"witch",emoji:"🧙‍♀️",sound:"CH",accept:["witch","witches","which","wish"]},
+  {word:"sandwich",emoji:"🥪",sound:"CH",accept:["sandwich","sandwiches","sand"]},
+  {word:"chopsticks",emoji:"🥢",sound:"CH",accept:["chopsticks","chopstick","chop"]},
+
+  // ===== J SOUNDS (28 words) =====
   {word:"juice",emoji:"🧃",sound:"J",accept:["juice","juices","goose","use"]},
   {word:"jar",emoji:"🫙",sound:"J",accept:["jar","jars","czar"]},
-  {word:"jet",emoji:"✈️",sound:"J",accept:["jet","jets","get","jed"]},
-  {word:"jelly",emoji:"🫐",sound:"J",accept:["jelly","jello","jeli","belly","kelly"]},
+  {word:"jello",emoji:"🍮",sound:"J",accept:["jello","jelly","jeli","yellow"]},
   {word:"giraffe",emoji:"🦒",sound:"J",accept:["giraffe","giraffes","draft","graph"]},
-  {word:"gem",emoji:"💎",sound:"J",accept:["gem","gems","jam","jim","gym"]},
+  {word:"jump",emoji:"🤸",sound:"J",accept:["jump","jumps","jumped","dump"]},
+  {word:"jellyfish",emoji:"🪼",sound:"J",accept:["jellyfish","jelly fish","jelly"]},
+  {word:"juggle",emoji:"🤹",sound:"J",accept:["juggle","juggles","juggler","juggling"]},
+  {word:"bridge",emoji:"🌉",sound:"J",accept:["bridge","bridges"]},
+  {word:"orange",emoji:"🍊",sound:"J",accept:["orange","oranges"]},
+  {word:"sponge",emoji:"🧽",sound:"J",accept:["sponge","sponges","spawn"]},
+  {word:"angel",emoji:"👼",sound:"J",accept:["angel","angels","angle"]},
+  {word:"ninja",emoji:"🥷",sound:"J",accept:["ninja","ninjas"]},
+  {word:"genie",emoji:"🧞",sound:"J",accept:["genie","genies","jeannie"]},
+  {word:"hedgehog",emoji:"🦔",sound:"J",accept:["hedgehog","hedgehogs","hedge hog"]},
+  {word:"germ",emoji:"🦠",sound:"J",accept:["germ","germs","gem","germy"]},
+  {word:"jacket",emoji:"🧥",sound:"J",accept:["jacket","jackets","jack it","coat"]},
+
+  // ===== R SOUNDS (28 words) =====
   {word:"rocket",emoji:"🚀",sound:"R",accept:["rocket","rockets","rock","rocked"]},
   {word:"rainbow",emoji:"🌈",sound:"R",accept:["rainbow","rainbows"]},
   {word:"rabbit",emoji:"🐰",sound:"R",accept:["rabbit","rabbits","rapid","raven"]},
@@ -771,7 +924,18 @@ const ALL_WORDS=[
   {word:"ring",emoji:"💍",sound:"R",accept:["ring","rings","rin","rink","rain"]},
   {word:"star",emoji:"⭐",sound:"R",accept:["star","stars","store","stare"]},
   {word:"car",emoji:"🚗",sound:"R",accept:["car","cars","card","cart"]},
-  {word:"roar",emoji:"🦁",sound:"R",accept:["roar","roars","raw","war","more"]},
+  {word:"rain",emoji:"🌧️",sound:"R",accept:["rain","rains","ran","rane"]},
+  {word:"run",emoji:"🏃",sound:"R",accept:["run","runs","rung","running","one"]},
+  {word:"rope",emoji:"🪢",sound:"R",accept:["rope","ropes","row","knot"]},
+  {word:"red",emoji:"🔴",sound:"R",accept:["red","reds","read","bread"]},
+  {word:"ruler",emoji:"📏",sound:"R",accept:["ruler","rulers","rule"]},
+  {word:"drum",emoji:"🥁",sound:"R",accept:["drum","drums","dream"]},
+  {word:"fries",emoji:"🍟",sound:"R",accept:["fries","fry","frise","rise"]},
+  {word:"train",emoji:"🚂",sound:"R",accept:["train","trains","crane","brain"]},
+  {word:"tree",emoji:"🌳",sound:"R",accept:["tree","trees","three","free"]},
+  {word:"tractor",emoji:"🚜",sound:"R",accept:["tractor","tractors","tracker"]},
+  {word:"parrot",emoji:"🦜",sound:"R",accept:["parrot","parrots","parent"]},
+  {word:"pirate",emoji:"🏴‍☠️",sound:"R",accept:["pirate","pirates"]},
 ];
 const COLLECTIBLES=['⭐','🪙','💎','🍭','🏅','🌟','👑','🍬','🎯','🧸'];
 const OBSTACLES=[{emoji:'🥥',label:'Bonked by coconut!'},{emoji:'🍌',label:'Slipped on banana!'},{emoji:'🧱',label:'Ran into a wall!'},{emoji:'💦',label:'Splashed by puddle!'},{emoji:'🕸️',label:'Caught in a web!'},{emoji:'🪨',label:'Tripped on a rock!'}];
@@ -783,30 +947,120 @@ const TRY_AGAIN_MSGS=["Almost! Try again! 💪","So close! One more try! 🌟","
 // ============================================================
 let currentWords=[], currentIndex=0, score=0, bestStreak=0, currentStreak=0;
 let attempts=0, isListening=false, recognition=null;
-let gameActive=false, pauseListening=false, micPermissionGranted=false;
-let lastResultIndex=0, collectedItems=[];
+let gameActive=false, collectedItems=[];
 
 // ============================================================
-//  SPEECH RECOGNITION
+//  PROGRESS TRACKING — saved across sessions
+// ============================================================
+function freshStats(){return {games:0,best:0,stars:0,sounds:{K:{ok:0,tries:0},G:{ok:0,tries:0},CH:{ok:0,tries:0},J:{ok:0,tries:0},R:{ok:0,tries:0}}};}
+function loadStats(){
+  try{const s=JSON.parse(lsGet('theoStats','null'));if(s&&s.sounds)return s;}catch(e){}
+  return freshStats();
+}
+let stats=loadStats();
+function saveStats(){lsSet('theoStats',JSON.stringify(stats));}
+
+function recordAttempt(sound,correct){
+  if(!stats.sounds[sound])stats.sounds[sound]={ok:0,tries:0};
+  stats.sounds[sound].tries++;
+  if(correct){stats.sounds[sound].ok++;stats.stars++;}
+  saveStats();updateStarBank();
+}
+const TROPHIES=[{stars:10,emoji:'🥉'},{stars:25,emoji:'🥈'},{stars:50,emoji:'🥇'},{stars:100,emoji:'🏆'},{stars:200,emoji:'👑'}];
+let gameStartStars=0, newTrophy=null;
+
+function updateTrophyRow(){
+  const row=document.getElementById('trophyRow');if(!row)return;
+  row.innerHTML='';
+  TROPHIES.forEach(t=>{
+    const s=document.createElement('span');
+    s.className='trophy'+(stats.stars>=t.stars?' earned':'');
+    s.textContent=t.emoji;
+    row.appendChild(s);
+  });
+}
+
+function sayTrophy(){
+  const u=new SpeechSynthesisUtterance("Wow! You earned a new trophy!");
+  u.lang='en-US';u.rate=0.9;u.pitch=1.2;
+  window.speechSynthesis.speak(u);
+}
+
+function recordGameEnd(){
+  stats.games++;if(score>stats.best)stats.best=score;
+  saveStats();
+  const crossed=TROPHIES.filter(t=>gameStartStars<t.stars&&stats.stars>=t.stars);
+  newTrophy=crossed.length?crossed[crossed.length-1]:null;
+  updateTrophyRow();
+}
+function updateStarBank(){
+  const el=document.getElementById('starBank');if(!el)return;
+  if(stats.stars>0){el.textContent='⭐ '+stats.stars+' stars collected!';el.classList.remove('hidden');}
+  else el.classList.add('hidden');
+}
+
+const SOUND_NAMES={K:'K — cake, duck',G:'G — dog, goat',CH:'CH — cheese, chair',J:'J — juice, jump',R:'R — rocket, star'};
+function toggleStats(){
+  const p=document.getElementById('statsPanel');
+  if(!p.classList.contains('hidden')){p.classList.add('hidden');return;}
+  renderStats();p.classList.remove('hidden');
+}
+function renderStats(){
+  const p=document.getElementById('statsPanel');
+  let html='<h3>Theo&#39;s Progress</h3>';
+  html+='<div class="stat-line">Games played: <strong>'+stats.games+'</strong> &middot; Best score: <strong>'+stats.best+'</strong>/10</div>';
+  Object.keys(stats.sounds).forEach(s=>{
+    const d=stats.sounds[s],pct=d.tries?Math.round(d.ok/d.tries*100):0;
+    html+='<div class="stat-line">'+(SOUND_NAMES[s]||s)+': '+(d.tries?pct+'% ('+d.ok+' of '+d.tries+')':'no tries yet')+'</div>';
+    html+='<div class="stat-bar-wrap"><div class="stat-bar" style="width:'+pct+'%"></div></div>';
+  });
+  html+='<label class="stat-line" style="display:block;margin-top:10px;cursor:pointer;"><input type="checkbox" '+(gentleMode?'checked':'')+' onchange="toggleGentle(this.checked)"> 🦖 Gentle mode — the T-Rex never catches him</label>';
+  html+='<button class="stats-reset" onclick="resetStats()">Reset all progress</button>';
+  p.innerHTML=html;
+}
+function resetStats(){
+  if(!confirm("Reset all of Theo's progress? This can't be undone."))return;
+  stats=freshStats();saveStats();renderStats();updateStarBank();
+}
+
+// ============================================================
+//  SPEECH RECOGNITION — tap-to-speak mode
 // ============================================================
 const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
 if(!SpeechRecognition){document.getElementById('startScreen').classList.add('hidden');document.getElementById('noSupport').classList.remove('hidden');}
 
-function setupRecognition(){
-  if(recognition||!SpeechRecognition)return;
+function createRecognition(){
+  // Always create fresh to avoid stale state after restart
+  if(recognition){try{recognition.abort();}catch(e){}}
   recognition=new SpeechRecognition();
-  recognition.lang='en-US';recognition.interimResults=false;recognition.maxAlternatives=5;recognition.continuous=true;
+  recognition.lang='en-US';recognition.interimResults=false;recognition.maxAlternatives=5;
+  recognition.continuous=false; // tap-to-speak: one utterance per tap
+
   recognition.onresult=(event)=>{
-    for(let r=lastResultIndex;r<event.results.length;r++){
-      if(!event.results[r].isFinal)continue;lastResultIndex=r+1;
-      if(pauseListening||!gameActive)return;
-      const res=event.results[r];let all=[];
-      for(let i=0;i<res.length;i++)all.push(res[i].transcript.toLowerCase().trim());
-      handleSpeechResult(all);
-    }
+    const res=event.results[0];
+    if(!res||!res.isFinal)return;
+    let all=[];
+    for(let i=0;i<res.length;i++)all.push(res[i].transcript.toLowerCase().trim());
+    stopListening();
+    if(gameActive)handleSpeechResult(all);
   };
-  recognition.onerror=(event)=>{if(event.error==='not-allowed'){showFeedback("Tap the 🎤 and allow mic!",'try-again');micPermissionGranted=false;stopListening();}};
-  recognition.onend=()=>{stopListening();if(gameActive&&micPermissionGranted)setTimeout(()=>{if(gameActive)startListening();},300);};
+  recognition.onerror=(event)=>{
+    stopListening();
+    if(event.error==='not-allowed'){showFeedback("Tap the 🎤 and allow mic!",'try-again');}
+    else if(event.error==='no-speech'){showFeedback("I didn't hear anything! Tap 🎤 again",'try-again');}
+  };
+  recognition.onend=()=>{stopListening();};
+}
+
+// Speak what was heard out loud
+function sayHeard(word, isCorrect){
+  const msg = isCorrect
+    ? "I heard you say " + word + "! Great job!"
+    : "I heard you say " + word + ". Try again!";
+  const u=new SpeechSynthesisUtterance(msg);
+  u.lang='en-US'; u.rate=0.85; u.pitch=1.1;
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(u);
 }
 
 // ============================================================
@@ -818,7 +1072,13 @@ function pickWords(){const bs={};ALL_WORDS.forEach(w=>{if(!bs[w.sound])bs[w.soun
 function startGame(){
   playStartSound();
   currentWords=pickWords(); currentIndex=0; score=0; bestStreak=0; currentStreak=0;
-  attempts=0; gameActive=true; pauseListening=false; collectedItems=[]; strikes=0;
+  attempts=0; gameActive=true; collectedItems=[]; strikes=0;
+  gameStartStars=stats.stars; newTrophy=null;
+
+  // Kill old recognition completely and make a fresh one
+  if(recognition){try{recognition.abort();}catch(e){}}
+  recognition=null;
+  isListening=false;
 
   document.getElementById('startScreen').classList.add('hidden');
   document.getElementById('endScreen').classList.add('hidden');
@@ -838,22 +1098,45 @@ function startGame(){
   animFrame=requestAnimationFrame(drawGame);
   startFootsteps();
   showCurrentWord();
-  if(micPermissionGranted)startListening();
 }
 
-function startGameWithMic(){micPermissionGranted=true;startGame();if(!isListening)startListening();}
+function startGameWithMic(){startGame();}
+
+const SOUND_COLORS={K:'#EF5350',G:'#66BB6A',CH:'#FFA726',J:'#AB47BC',R:'#42A5F5'};
+
+function renderProgressDots(){
+  const row=document.getElementById('progressDots');if(!row)return;
+  row.innerHTML='';
+  for(let i=0;i<currentWords.length;i++){
+    const d=document.createElement('span');
+    d.className='p-dot'+(i<currentIndex?' done':i===currentIndex?' now':'');
+    row.appendChild(d);
+  }
+}
 
 function showCurrentWord(){
   if(currentIndex>=currentWords.length){endGame();return;}
+  renderProgressDots();
   const w=currentWords[currentIndex];
   document.getElementById('wordEmoji').textContent=w.emoji;
-  document.getElementById('soundBadge').textContent=w.sound+' sound';
+  const badge=document.getElementById('soundBadge');
+  badge.textContent=w.sound+' sound';
+  badge.style.background=SOUND_COLORS[w.sound]||'#667eea';
   const card=document.getElementById('wordCard');card.style.animation='none';card.offsetHeight;card.style.animation='pop 0.5s ease-out';
   document.getElementById('feedbackMsg').classList.add('hidden');
   document.getElementById('heardText').classList.add('hidden');
   document.getElementById('skipBtn').classList.add('hidden');
-  document.getElementById('micLabel').textContent=micPermissionGranted?"Say it! 🗣️":'Tap the 🎤 to start!';
+  document.getElementById('micLabel').textContent='Tap 🎤 to speak!';
   attempts=0;
+  // Auto-say the word so Theo hears it before trying (he can't read!)
+  setTimeout(()=>{if(gameActive&&!isListening)sayWord(w.word);},700);
+}
+
+// Speak a word aloud (queues politely behind any current speech)
+function sayWord(word){
+  const u=new SpeechSynthesisUtterance(word);
+  u.lang='en-US';u.rate=0.75;u.pitch=1.1;
+  window.speechSynthesis.speak(u);
 }
 
 function hearWord(){
@@ -866,11 +1149,24 @@ function hearWord(){
 }
 
 function toggleListening(){
-  if(isListening&&!pauseListening){pauseListening=true;stopListeningNow();document.getElementById('micLabel').textContent='Mic paused. Tap to resume!';document.getElementById('micBtn').classList.remove('listening');document.getElementById('micBtn').textContent='🎤';}
-  else{pauseListening=false;micPermissionGranted=true;startListening();}
+  if(isListening){stopListeningNow();return;}
+  startListening();
 }
-function startListening(){setupRecognition();if(!recognition)return;if(!isListening){try{lastResultIndex=0;recognition.start();}catch(e){}}isListening=true;document.getElementById('micBtn').classList.add('listening');document.getElementById('micBtn').textContent='👂';document.getElementById('micLabel').textContent="Say it! 🗣️";}
-function stopListening(){isListening=false;document.getElementById('micBtn').classList.remove('listening');document.getElementById('micBtn').textContent=micPermissionGranted?'👂':'🎤';}
+function startListening(){
+  if(!gameActive||isListening)return;
+  createRecognition();
+  if(!recognition)return;
+  try{recognition.start();}catch(e){return;}
+  isListening=true;
+  document.getElementById('micBtn').classList.add('listening');
+  document.getElementById('micBtn').textContent='👂';
+  document.getElementById('micLabel').textContent="Say it! 🗣️";
+}
+function stopListening(){
+  isListening=false;
+  document.getElementById('micBtn').classList.remove('listening');
+  document.getElementById('micBtn').textContent='🎤';
+}
 function stopListeningNow(){if(recognition){try{recognition.stop();}catch(e){}}stopListening();}
 
 function handleSpeechResult(transcripts){
@@ -885,8 +1181,9 @@ function handleSpeechResult(transcripts){
 }
 
 function handleCorrect(heard){
+  recordAttempt(currentWords[currentIndex].sound,true);
   score++;currentStreak++;if(currentStreak>bestStreak)bestStreak=currentStreak;
-  pauseListening=true;
+  sayHeard(heard, true);
   const col=COLLECTIBLES[Math.floor(Math.random()*COLLECTIBLES.length)];
   char.collectible=col;char.collectibleY=0;char.collectibleOpacity=1;
   char.state=STATES.JUMPING;char.stateTimer=0;char.obstacle=null;
@@ -895,11 +1192,13 @@ function handleCorrect(heard){
   showFeedback(SUCCESS_MSGS[Math.floor(Math.random()*SUCCESS_MSGS.length)],'success');
   launchConfetti();
   const em=document.getElementById('wordEmoji');em.style.animation='none';em.offsetHeight;em.style.animation='wiggle 0.3s ease-in-out 5';
-  setTimeout(()=>{currentIndex++;char.targetX=getCharTargetX(currentIndex);pauseListening=false;showCurrentWord();},1800);
+  setTimeout(()=>{currentIndex++;char.targetX=getCharTargetX(currentIndex);showCurrentWord();},1800);
 }
 
 function handleIncorrect(heard){
+  recordAttempt(currentWords[currentIndex].sound,false);
   attempts++;currentStreak=0;strikes++;
+  if(gentleMode)strikes=Math.min(strikes,MAX_STRIKES-1); // never reaches the chomp
   updateDangerMeter();
 
   // T-Rex growl + step closer
@@ -919,14 +1218,15 @@ function handleIncorrect(heard){
   playTripCrash();
   showFeedback(obs.label+" Try again!",'try-again');
 
-  if(heard){const h=document.getElementById('heardText');h.textContent='I heard: "'+heard+'"';h.classList.remove('hidden');}
+  if(heard){sayHeard(heard, false);}
   if(attempts>=2)document.getElementById('skipBtn').classList.remove('hidden');
   const card=document.getElementById('wordCard');card.style.animation='none';card.offsetHeight;card.style.animation='shake 0.5s ease-in-out';
-  document.getElementById('micLabel').textContent='Try again! 🗣️';
+  document.getElementById('micLabel').textContent='Tap 🎤 to try again!';
 }
 
 function triggerGameOver(){
-  pauseListening=true;gameActive=false;
+  gameActive=false;
+  recordGameEnd();
   stopListeningNow();stopFootsteps();
 
   // T-Rex charges!
@@ -942,6 +1242,9 @@ function triggerGameOver(){
     document.getElementById('gameoverScreen').classList.remove('hidden');
     document.getElementById('goScore').textContent=score;
     document.getElementById('goLoot').textContent=collectedItems.length>0?collectedItems.join(' '):'';
+    const nt=document.getElementById('newTrophyGo');
+    if(newTrophy){nt.textContent=newTrophy.emoji+' NEW TROPHY! '+newTrophy.emoji;nt.classList.remove('hidden');launchConfetti();sayTrophy();}
+    else nt.classList.add('hidden');
   },2800);
 }
 
@@ -953,15 +1256,13 @@ function showFeedback(text,type){
 function addCollectible(emoji){collectedItems.push(emoji);const r=document.getElementById('collectiblesRow');const i=document.createElement('span');i.className='collected-item';i.textContent=emoji;r.appendChild(i);}
 
 function skipWord(){
-  // Skipping also costs a strike — the T-Rex doesn't forgive!
-  strikes++;updateDangerMeter();
-  playTRexGrowl();trex.targetX=getTRexTargetX(strikes);
-  if(strikes>=MAX_STRIKES){triggerGameOver();return;}
+  // Skipping is FREE — no strike. Practice should never punish moving on.
+  currentStreak=0;
   currentIndex++;char.targetX=getCharTargetX(currentIndex);showCurrentWord();
 }
 
 function endGame(){
-  gameActive=false;pauseListening=true;stopListeningNow();stopFootsteps();
+  gameActive=false;recordGameEnd();stopListeningNow();stopFootsteps();
   char.targetX=CANVAS_W-70;char.state=STATES.CELEBRATING;char.stateTimer=0;
   setTimeout(()=>{
     if(animFrame)cancelAnimationFrame(animFrame);
@@ -975,10 +1276,17 @@ function endGame(){
     else if(score>=7){t.textContent="🎉 Amazing Job!";launchConfetti();}
     else if(score>=4){t.textContent="⭐ Great Work!";}
     else{t.textContent="💪 Keep Practicing!";}
+    const nt=document.getElementById('newTrophyWin');
+    if(newTrophy){nt.textContent=newTrophy.emoji+' NEW TROPHY! '+newTrophy.emoji;nt.classList.remove('hidden');launchConfetti();sayTrophy();}
+    else nt.classList.add('hidden');
     playJumpCollect();
   },1500);
 }
 
+applyHero(selectedHero);
+buildHeroPicker();
+updateStarBank();
+updateTrophyRow();
 drawStartCharacter();
 </script>
 </body>
