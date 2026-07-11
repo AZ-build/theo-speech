@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Theo's Speech Adventure v1.0 -->
+<!-- Theo's Speech Adventure v1.0.1 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -36,7 +36,9 @@
     -webkit-tap-highlight-color:transparent; user-select:none;
   }
   button { font-family:inherit; transition:transform 0.15s ease, box-shadow 0.15s ease; }
-  .app { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; padding:10px; position:relative; }
+  .app { display:flex; flex-direction:column; align-items:center; height:100vh; height:100dvh; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:10px; position:relative; }
+  /* Auto margins = vertical centering that degrades gracefully to scrolling when content overflows */
+  .app > * { margin-top:auto; margin-bottom:auto; }
 
   /* START */
   .start-screen { text-align:center; animation:pop 0.6s ease-out; }
@@ -1004,6 +1006,8 @@ function toggleStats(){
   const p=document.getElementById('statsPanel');
   if(!p.classList.contains('hidden')){p.classList.add('hidden');return;}
   renderStats();p.classList.remove('hidden');
+  // Bring the panel into view — the start screen can be taller than the phone screen
+  setTimeout(()=>{p.scrollIntoView({behavior:'smooth',block:'end'});},60);
 }
 function renderStats(){
   const p=document.getElementById('statsPanel');
