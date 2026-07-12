@@ -56,8 +56,17 @@
   .inv-btn { background:rgba(255,255,255,0.2); border:2px solid rgba(255,255,255,0.4); color:white; font-size:1em; font-weight:bold; padding:9px 22px; border-radius:25px; cursor:pointer; margin-top:14px; }
   .inv-btn:active { transform:scale(0.95); }
   .inv-panel { background:rgba(0,0,0,0.25); border-radius:16px; padding:14px; margin:10px auto 0; display:flex; flex-wrap:wrap; gap:10px; justify-content:center; max-width:320px; }
-  .inv-item { background:rgba(255,255,255,0.15); border-radius:12px; padding:6px 12px; font-size:1.3em; color:white; animation:pop 0.3s ease-out; }
+  .inv-item { background:rgba(255,255,255,0.15); border-radius:12px; padding:6px 12px; font-size:1.3em; color:white; cursor:pointer; animation:pop 0.3s ease-out, inv-hint 1.8s ease-in-out infinite 0.3s; }
+  .inv-item:active { transform:scale(0.88); }
   .inv-item small { font-size:0.65em; color:#FFD700; font-weight:bold; }
+  @keyframes inv-hint { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+  .treasure-rain-overlay { position:fixed; top:0; left:0; width:100vw; height:100dvh; pointer-events:none; z-index:9999; overflow:hidden; }
+  .treasure-drop { position:absolute; top:-10vh; opacity:0; will-change:transform,opacity; }
+  @keyframes treasure-fall {
+    0% { transform:translateY(0) translateX(0) rotate(0deg); opacity:0; }
+    8% { opacity:1; }
+    100% { transform:translateY(115vh) translateX(var(--drift,0px)) rotate(var(--rot,180deg)); opacity:0.9; }
+  }
   .home-btn { background:rgba(255,255,255,0.25); border:none; border-radius:50%; width:34px; height:34px; font-size:1.05em; cursor:pointer; margin-right:6px; line-height:1; }
   .home-btn:active { transform:scale(0.9); }
   .home-btn2 { background:rgba(255,255,255,0.2); border:2px solid rgba(255,255,255,0.4); color:white; font-size:1.1em; font-weight:bold; padding:13px 30px; border-radius:50px; cursor:pointer; margin-top:10px; margin-left:8px; }
@@ -1075,9 +1084,15 @@ function updateLevelBadge(){
 //  INVENTORY — treasures saved forever
 // ============================================================
 function addToInv(emoji){ stats.inv[emoji]=(stats.inv[emoji]||0)+1; }
+
+// Treasures that already did their full rain THIS time the box is open.
+// Resets every time the drawer is opened, so the trick stays fresh each visit.
+let invPlayedThisOpen=new Set();
+
 function toggleInv(){
   const p=document.getElementById('invPanel');
   if(!p.classList.contains('hidden')){p.classList.add('hidden');return;}
+  invPlayedThisOpen=new Set();
   p.innerHTML='';
   const keys=Object.keys(stats.inv||{});
   if(keys.length===0){
@@ -1086,11 +1101,72 @@ function toggleInv(){
     keys.forEach(k=>{
       const d=document.createElement('div');d.className='inv-item';
       d.innerHTML=k+' <small>×'+stats.inv[k]+'</small>';
+      d.onclick=()=>rainTreasure(k,stats.inv[k]);
       p.appendChild(d);
     });
   }
   p.classList.remove('hidden');
   setTimeout(()=>{p.scrollIntoView({behavior:'smooth',block:'nearest'});},60);
+}
+
+// ============================================================
+//  TREASURE RAIN — tap a treasure, it rains down the count you own.
+//  First tap per drawer-opening = full rain + spoken count.
+//  Repeat taps = a small sparkle, so it never feels unresponsive.
+// ============================================================
+const TREASURE_NAMES={'⭐':'star','🌟':'sparkly star','🪙':'coin','💎':'diamond','🍭':'lollipop','🏅':'medal','👑':'crown','🍬':'gummy candy','🎯':'target','🧸':'teddy bear','🌈':'rainbow'};
+const TREASURE_RAIN_CAP=16; // hard cap so a big collection doesn't lag or take forever to watch
+function pluralizeTreasure(name){ return name.endsWith('y') ? name.slice(0,-1)+'ies' : name+'s'; }
+
+function rainTreasure(emoji,count){
+  if(invPlayedThisOpen.has(emoji)){ spawnSparkleBurst(); return; }
+  invPlayedThisOpen.add(emoji);
+
+  const dropCount=Math.min(count,TREASURE_RAIN_CAP);
+  const overlay=document.createElement('div');
+  overlay.className='treasure-rain-overlay';
+  document.body.appendChild(overlay);
+  for(let i=0;i<dropCount;i++){
+    const drop=document.createElement('span');
+    drop.className='treasure-drop';
+    drop.textContent=emoji;
+    drop.style.left=(Math.random()*88+4)+'vw';
+    drop.style.fontSize=(1.4+Math.random()*0.9).toFixed(2)+'em';
+    drop.style.setProperty('--drift',(Math.random()*60-30).toFixed(0)+'px');
+    drop.style.setProperty('--rot',(Math.random()*300-150).toFixed(0)+'deg');
+    const dur=(1.1+Math.random()*0.7).toFixed(2), delay=(i*0.06+Math.random()*0.15).toFixed(2);
+    drop.style.animation='treasure-fall '+dur+'s ease-in '+delay+'s forwards';
+    overlay.appendChild(drop);
+  }
+  setTimeout(()=>overlay.remove(),(dropCount*0.06+2.2)*1000);
+
+  const base=TREASURE_NAMES[emoji]||'treasure';
+  const name=count===1?base:pluralizeTreasure(base);
+  const say=(count>TREASURE_RAIN_CAP?'Whoa! ':'')+'You have '+count+' '+name+'!';
+  try{
+    window.speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(say);u.rate=0.95;u.pitch=1.15;
+    window.speechSynthesis.speak(u);
+  }catch(e){}
+}
+
+function spawnSparkleBurst(){
+  const overlay=document.createElement('div');
+  overlay.className='treasure-rain-overlay';
+  document.body.appendChild(overlay);
+  for(let i=0;i<5;i++){
+    const drop=document.createElement('span');
+    drop.className='treasure-drop';
+    drop.textContent='✨';
+    drop.style.left=(Math.random()*88+4)+'vw';
+    drop.style.fontSize='1.3em';
+    drop.style.setProperty('--drift',(Math.random()*40-20).toFixed(0)+'px');
+    drop.style.setProperty('--rot',(Math.random()*180-90).toFixed(0)+'deg');
+    const dur=(0.7+Math.random()*0.3).toFixed(2), delay=(i*0.04).toFixed(2);
+    drop.style.animation='treasure-fall '+dur+'s ease-in '+delay+'s forwards';
+    overlay.appendChild(drop);
+  }
+  setTimeout(()=>overlay.remove(),1300);
 }
 
 // ============================================================
