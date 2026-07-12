@@ -849,6 +849,33 @@ let footstepInterval=null;
 function startFootsteps(){if(footstepInterval)return;footstepInterval=setInterval(()=>{if(char.state===STATES.RUNNING)playFootstep();},200);}
 function stopFootsteps(){if(footstepInterval){clearInterval(footstepInterval);footstepInterval=null;}}
 
+// "Ta-da!" fanfare — quick rising run + a bright held chord. mini=true gives a
+// small chime version (used for repeat taps on an already-played treasure).
+function playTaDa(mini){
+  try{const ctx=getAudio();
+  [523,659,784].forEach((f,i)=>{
+    const o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);
+    o.type='triangle';o.frequency.value=f;
+    const t=ctx.currentTime+i*0.08;
+    g.gain.setValueAtTime(0.001,t);
+    g.gain.linearRampToValueAtTime(mini?0.08:0.13,t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.001,t+0.12);
+    o.start(t);o.stop(t+0.13);
+  });
+  if(mini)return;
+  setTimeout(()=>{
+    [1047,1319,1568].forEach((f,i)=>{
+      const o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);
+      o.type=i===0?'triangle':'sine';o.frequency.value=f;
+      g.gain.setValueAtTime(0.001,ctx.currentTime);
+      g.gain.linearRampToValueAtTime(0.14,ctx.currentTime+0.03);
+      g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.5);
+      o.start();o.stop(ctx.currentTime+0.5);
+    });
+  },240);
+  }catch(e){}
+}
+
 // ============================================================
 //  CONFETTI
 // ============================================================
@@ -1121,6 +1148,7 @@ function pluralizeTreasure(name){ return name.endsWith('y') ? name.slice(0,-1)+'
 function rainTreasure(emoji,count){
   if(invPlayedThisOpen.has(emoji)){ spawnSparkleBurst(); return; }
   invPlayedThisOpen.add(emoji);
+  playTaDa();
 
   const dropCount=Math.min(count,TREASURE_RAIN_CAP);
   const overlay=document.createElement('div');
@@ -1151,6 +1179,7 @@ function rainTreasure(emoji,count){
 }
 
 function spawnSparkleBurst(){
+  playTaDa(true);
   const overlay=document.createElement('div');
   overlay.className='treasure-rain-overlay';
   document.body.appendChild(overlay);
