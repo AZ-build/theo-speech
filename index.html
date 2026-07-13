@@ -1041,13 +1041,18 @@ function sayTrophy(){
   window.speechSynthesis.speak(u);
 }
 function sayLevelUp(){
-  const u=new SpeechSynthesisUtterance("LEVEL UP! You are now level "+newLevel.n+", the "+newLevel.name+"!");
+  const msg=newLevel.milestone
+    ? "AMAZING! You reached level "+newLevel.n+" — the "+newLevel.name+"! You won a shiny prize for your treasure box!"
+    : "LEVEL UP! You are now level "+newLevel.n+", the "+newLevel.name+"!";
+  const u=new SpeechSynthesisUtterance(msg);
   u.lang='en-US';u.rate=0.9;u.pitch=1.2;
   window.speechSynthesis.speak(u);
 }
 function sayEnd(){
   let msg=score===10?"PERFECT SCORE! Ten out of ten! You win five bonus stars!":"You got "+score+" out of ten!";
-  if(newLevel)msg+=" LEVEL UP! You are now level "+newLevel.n+", the "+newLevel.name+"!";
+  if(newLevel)msg+=newLevel.milestone
+    ? " AMAZING! You reached level "+newLevel.n+" — the "+newLevel.name+"! You won a shiny prize for your treasure box!"
+    : " LEVEL UP! You are now level "+newLevel.n+", the "+newLevel.name+"!";
   else if(newTrophy)msg+=" Wow! You earned a new trophy!";
   else if(score>=6&&Math.random()<0.3)msg+=" "+JOKES[Math.floor(Math.random()*JOKES.length)];
   const u=new SpeechSynthesisUtterance(msg);
@@ -1063,6 +1068,7 @@ function recordGameEnd(){
   newTrophy=crossed.length?crossed[crossed.length-1]:null;
   const before=levelInfo(gameStartStars).lvl.n, after=levelInfo(stats.stars).lvl;
   newLevel=after.n>before?after:null;
+  if(newLevel&&newLevel.milestone){ addToInv(newLevel.emoji); saveStats(); } // awesome prize!
   updateTrophyRow();
 }
 function updateStarBank(){
@@ -1073,20 +1079,70 @@ function updateStarBank(){
 }
 
 // ============================================================
-//  LEVELS — total stars drive progression
+//  LEVELS — total stars drive progression, all the way to 100.
+//  Levels 1-10 are untouched (existing progress stays valid).
+//  Levels 20/30/.../100 are "awesome prize" milestones: each one
+//  grants a unique medal into the treasure drawer plus a bigger
+//  celebration (see recordGameEnd + the LEVEL UP display blocks).
 // ============================================================
-const LEVELS=[
-  {n:1,need:0,emoji:'🥾',name:'Explorer'},
-  {n:2,need:15,emoji:'🏃',name:'Runner'},
-  {n:3,need:35,emoji:'🦘',name:'Jumper'},
-  {n:4,need:60,emoji:'🧗',name:'Climber'},
-  {n:5,need:90,emoji:'🪁',name:'Flyer'},
-  {n:6,need:125,emoji:'🚀',name:'Rocketeer'},
-  {n:7,need:165,emoji:'⭐',name:'Star Catcher'},
-  {n:8,need:210,emoji:'🦖',name:'Dino Tamer'},
-  {n:9,need:260,emoji:'🦸',name:'Super Hero'},
-  {n:10,need:320,emoji:'👑',name:'Legend'},
+const LEVEL_MILESTONES={ // levels 20-100, every 10th level beyond the original 10
+  20:{emoji:'🏵️',name:'Treasure Hunter'},
+  30:{emoji:'🦴',name:'Dino Whisperer'},
+  40:{emoji:'🪄',name:'Genie Friend'},
+  50:{emoji:'🔥',name:'Dragon Rider'},
+  60:{emoji:'⚡',name:'Mega Hero'},
+  70:{emoji:'🌌',name:'Galaxy Guardian'},
+  80:{emoji:'👽',name:'Alien Ally'},
+  90:{emoji:'🔱',name:'Phoenix Champion'},
+  100:{emoji:'🌠',name:'Ultimate Legend'},
+};
+// Rotating cast for the levels in between milestones — cycles through this
+// pool 3 times (plain, then "Super", then "Ultra") across levels 11-99.
+const LEVEL_ROLES=[
+  {emoji:'🥷',name:'Ninja'},{emoji:'🧙',name:'Wizard'},{emoji:'🏴‍☠️',name:'Pirate'},
+  {emoji:'🤖',name:'Robot Pilot'},{emoji:'🦄',name:'Unicorn Rider'},{emoji:'🐉',name:'Dragon Tamer'},
+  {emoji:'🧑‍🚀',name:'Astronaut'},{emoji:'🕵️',name:'Secret Agent'},{emoji:'🧝',name:'Elf Ranger'},
+  {emoji:'🦸',name:'Caped Hero'},{emoji:'🏹',name:'Archer'},{emoji:'⚔️',name:'Knight'},
+  {emoji:'🛡️',name:'Guardian'},{emoji:'🌪️',name:'Storm Chaser'},{emoji:'🔮',name:'Mystic'},
+  {emoji:'🎩',name:'Magician'},{emoji:'🦅',name:'Sky Rider'},{emoji:'🐺',name:'Wolf Whisperer'},
+  {emoji:'🦈',name:'Shark Tamer'},{emoji:'🌋',name:'Volcano Explorer'},{emoji:'🛸',name:'UFO Pilot'},
+  {emoji:'🧛',name:'Vampire Hunter'},{emoji:'🐲',name:'Dragon Knight'},{emoji:'🏆',name:'Champion'},
+  {emoji:'🎯',name:'Sharpshooter'},{emoji:'🧨',name:'Adventurer'},{emoji:'🌊',name:'Wave Rider'},
+  {emoji:'🛰️',name:'Space Ranger'},{emoji:'🎪',name:'Circus Star'},{emoji:'🌟',name:'All-Star'},
 ];
+const LEVEL_TIER_PREFIX=['','Super ','Ultra '];
+
+const LEVELS=(function(){
+  const arr=[
+    {n:1,need:0,emoji:'🥾',name:'Explorer'},
+    {n:2,need:15,emoji:'🏃',name:'Runner'},
+    {n:3,need:35,emoji:'🦘',name:'Jumper'},
+    {n:4,need:60,emoji:'🧗',name:'Climber'},
+    {n:5,need:90,emoji:'🪁',name:'Flyer'},
+    {n:6,need:125,emoji:'🚀',name:'Rocketeer'},
+    {n:7,need:165,emoji:'⭐',name:'Star Catcher'},
+    {n:8,need:210,emoji:'🦖',name:'Dino Tamer'},
+    {n:9,need:260,emoji:'🦸',name:'Super Hero'},
+    {n:10,need:320,emoji:'👑',name:'Legend'},
+  ];
+  let need=320, regularIndex=0;
+  for(let n=11;n<=100;n++){
+    // Star cost per level keeps climbing like levels 2-10 did, then caps at
+    // 70/level so the long tail stays reachable instead of exploding.
+    need+=Math.min(60+5*(n-10),70);
+    const ms=LEVEL_MILESTONES[n];
+    if(ms){
+      arr.push({n,need,emoji:ms.emoji,name:ms.name,milestone:true});
+    } else {
+      const tier=Math.min(Math.floor(regularIndex/LEVEL_ROLES.length),LEVEL_TIER_PREFIX.length-1);
+      const role=LEVEL_ROLES[regularIndex%LEVEL_ROLES.length];
+      arr.push({n,need,emoji:role.emoji,name:LEVEL_TIER_PREFIX[tier]+role.name});
+      regularIndex++;
+    }
+  }
+  return arr;
+})();
+
 function levelInfo(stars){
   let cur=LEVELS[0],next=null;
   for(const L of LEVELS){ if(stars>=L.need)cur=L; else {next=L;break;} }
@@ -1135,7 +1191,8 @@ function toggleInv(){
 //  First tap per drawer-opening = full rain + spoken count.
 //  Repeat taps = a small sparkle, so it never feels unresponsive.
 // ============================================================
-const TREASURE_NAMES={'⭐':'star','🌟':'sparkly star','🪙':'coin','💎':'diamond','🍭':'lollipop','🏅':'medal','👑':'crown','🍬':'gummy candy','🎯':'target','🧸':'teddy bear','🌈':'rainbow'};
+const TREASURE_NAMES={'⭐':'star','🌟':'sparkly star','🪙':'coin','💎':'diamond','🍭':'lollipop','🏅':'medal','👑':'crown','🍬':'gummy candy','🎯':'target','🧸':'teddy bear','🌈':'rainbow',
+  '🏵️':'rosette medal','🦴':'dino bone','🪄':'magic wand','🔥':'flame badge','⚡':'lightning badge','🌌':'galaxy badge','👽':'alien buddy','🔱':'trident badge','🌠':'shooting star'};
 const TREASURE_RAIN_CAP=16; // hard cap so a big collection doesn't lag or take forever to watch
 function pluralizeTreasure(name){ return name.endsWith('y') ? name.slice(0,-1)+'ies' : name+'s'; }
 
@@ -1620,7 +1677,11 @@ function triggerGameOver(){
     document.getElementById('goScore').textContent=score;
     document.getElementById('goLoot').textContent=collectedItems.length>0?collectedItems.join(' '):'';
     const nt=document.getElementById('newTrophyGo');
-    if(newLevel){nt.textContent=newLevel.emoji+' LEVEL UP! '+newLevel.emoji;nt.classList.remove('hidden');launchConfetti();sayLevelUp();}
+    if(newLevel){
+      if(newLevel.milestone){nt.textContent=newLevel.emoji+' AWESOME PRIZE! '+newLevel.emoji;setTimeout(launchConfetti,400);setTimeout(launchConfetti,800);}
+      else nt.textContent=newLevel.emoji+' LEVEL UP! '+newLevel.emoji;
+      nt.classList.remove('hidden');launchConfetti();sayLevelUp();
+    }
     else if(newTrophy){nt.textContent=newTrophy.emoji+' NEW TROPHY! '+newTrophy.emoji;nt.classList.remove('hidden');launchConfetti();sayTrophy();}
     else nt.classList.add('hidden');
   },2800);
@@ -1660,7 +1721,11 @@ function endGame(){
     if(score===10){bl.textContent='🌈 +5 BONUS STARS! 🌈';bl.classList.remove('hidden');}
     else bl.classList.add('hidden');
     const nt=document.getElementById('newTrophyWin');
-    if(newLevel){nt.textContent=newLevel.emoji+' LEVEL UP! '+newLevel.emoji;nt.classList.remove('hidden');launchConfetti();}
+    if(newLevel){
+      if(newLevel.milestone){nt.textContent=newLevel.emoji+' AWESOME PRIZE! '+newLevel.emoji;setTimeout(launchConfetti,400);setTimeout(launchConfetti,800);}
+      else nt.textContent=newLevel.emoji+' LEVEL UP! '+newLevel.emoji;
+      nt.classList.remove('hidden');launchConfetti();
+    }
     else if(newTrophy){nt.textContent=newTrophy.emoji+' NEW TROPHY! '+newTrophy.emoji;nt.classList.remove('hidden');launchConfetti();}
     else nt.classList.add('hidden');
     sayEnd();
